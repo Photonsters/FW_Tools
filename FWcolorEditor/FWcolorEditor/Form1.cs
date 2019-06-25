@@ -170,7 +170,7 @@ namespace FWcolorEditor
         }
 
         private void UpdateButton(Button button, int color)
-        { 
+        {
             if (color != 0)
             {
                 button.BackColor = Color.FromArgb(color);
@@ -179,9 +179,49 @@ namespace FWcolorEditor
             }
             else
             {
-                button.BackColor = Color.FromArgb(255, 255, 255, 255); //set to white
+                button.BackColor = Color.FromArgb(255, 127, 127, 127); //set to mid gray
                 button.Enabled = false;
                 button.Text = "Unknown";
+            }
+        }
+
+        private void UpdateSampleButton(Button button, int colorBackg, int colorForeg)
+        {
+            if (colorBackg != 0)
+            {
+                button.BackColor = Color.FromArgb(colorBackg);
+            }
+            else
+            {
+                button.BackColor = Color.FromArgb(255, 127, 127, 127); //set to  mid gray
+            }
+            if (colorForeg != 0)
+            {
+                button.ForeColor = Color.FromArgb(colorForeg);
+            }
+            else
+            {
+                button.ForeColor = Color.FromArgb(255, 0, 0, 0); //set to black
+            }
+        }
+
+        private void UpdateSampleBox(TextBox box, int colorBackg, int colorForeg)
+        {
+            if (colorBackg != 0)
+            {
+                box.BackColor = Color.FromArgb(colorBackg);
+            }
+            else
+            {
+                box.BackColor = Color.FromArgb(255, 127, 127, 127); //set to mid gray
+            }
+            if (colorForeg != 0)
+            {
+                box.ForeColor = Color.FromArgb(colorForeg);
+            }
+            else
+            {
+                box.ForeColor = Color.FromArgb(255, 0, 0, 0); //set to black
             }
         }
 
@@ -190,21 +230,17 @@ namespace FWcolorEditor
             UpdateButton(button3, FileNameColor);
             UpdateButton(button4, FileBackgroundColor);
             UpdateButton(button5, LastFileColor);
-            textBox2.BackColor = Color.FromArgb(FileBackgroundColor);
-            textBox2.ForeColor = Color.FromArgb(FileNameColor);
-            textBox3.BackColor = Color.FromArgb(FileBackgroundColor);
-            textBox3.ForeColor = Color.FromArgb(LastFileColor);
+            UpdateSampleBox(textBox2, FileBackgroundColor, FileNameColor);
+            UpdateSampleBox(textBox3, FileBackgroundColor, LastFileColor);
             UpdateButton(button6, PBarFillColor);
             UpdateButton(button7, PBarEmptyColor);
-            textBox4.BackColor = Color.FromArgb(PBarFillColor);
-            textBox5.BackColor = Color.FromArgb(PBarEmptyColor);
+            UpdateSampleBox(textBox4, PBarFillColor, 0); //white text
+            UpdateSampleBox(textBox5, PBarEmptyColor, (0xff<<24)); //black text
             UpdateButton(button8, TextColor);
             UpdateButton(button9, BackgroundColor);
             UpdateButton(button10, ButtonColor);
-            textBox6.BackColor = Color.FromArgb(BackgroundColor);
-            textBox6.ForeColor = Color.FromArgb(TextColor);
-            button11.BackColor = Color.FromArgb(ButtonColor);
-            button11.ForeColor = Color.FromArgb(TextColor);
+            UpdateSampleBox(textBox6, BackgroundColor, TextColor);
+            UpdateSampleButton(button11, ButtonColor, TextColor);
         }
 
         private void EditColor(Button button, ref int color, int FWoffset)
