@@ -91,7 +91,7 @@ namespace FWcolorEditor
                 MessageBox.Show(ErrorText, "FW database error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return -2; //Error in offset file
             }
-            Byte[] array = BitConverter.GetBytes((color & 0xffffff ) << 8);
+            Byte[] array = BitConverter.GetBytes((color & 0xffffff) << 8);
             Array.Reverse(array);
             Buffer.BlockCopy(array, 0, File, Offset, 4);
             return 0;
@@ -234,8 +234,8 @@ namespace FWcolorEditor
             UpdateSampleBox(textBox3, FileBackgroundColor, LastFileColor);
             UpdateButton(button6, PBarFillColor);
             UpdateButton(button7, PBarEmptyColor);
-            UpdateSampleBox(textBox4, PBarFillColor, 0); //white text
-            UpdateSampleBox(textBox5, PBarEmptyColor, (0xff<<24)); //black text
+            UpdateSampleBox(textBox4, PBarFillColor, ~(0)); //white text
+            UpdateSampleBox(textBox5, PBarEmptyColor, (0xff << 24)); //black text
             UpdateButton(button8, TextColor);
             UpdateButton(button9, BackgroundColor);
             UpdateButton(button10, ButtonColor);
@@ -275,6 +275,27 @@ namespace FWcolorEditor
 
         }
 
+        private void CheckAndSetColor(string index, uint ThemeColor, ref int GUIColor, int FWoffset)
+        {
+            if ((ThemeColor & 0xFF000000) != 0xFF000000)
+            {
+                //Not a valid color
+                string ErrorText = "Value " + index + " of theme file is not valid as a color";
+                MessageBox.Show(ErrorText, "Theme file error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            else
+            {
+                //Set color in GUI
+                GUIColor = (int)ThemeColor;
+
+                //update in FW
+               SetColor(FWdata, FWoffset, (int)ThemeColor);
+
+            }
+
+        }
+
+
         private void Button1_Click(object sender, EventArgs e)
         {
 
@@ -304,6 +325,8 @@ namespace FWcolorEditor
 
                         //Enable save
                         button2.Enabled = true;
+                        //Enable save theme
+                        button13.Enabled = true;
                     }
                     else
                     {
@@ -347,7 +370,7 @@ namespace FWcolorEditor
         {
             SaveFileDialog saveFileDialog = new SaveFileDialog
             {
-//                InitialDirectory = AppDomain.CurrentDomain.BaseDirectory,
+                //                InitialDirectory = AppDomain.CurrentDomain.BaseDirectory,
                 Filter = "FW files (*.lcd)|*.lcd|All files (*.*)|*.*",
                 FilterIndex = 1,
                 RestoreDirectory = true
@@ -366,7 +389,7 @@ namespace FWcolorEditor
                 if (usedBlocks > 0)
                 {
                     //Update Menu shown string to identify as customized version (Photonsters Color Editor=PCE)
-                    string customVersion = "V"+ Version + "_PCE";
+                    string customVersion = "V" + Version + "_PCE";
                     SetVersion(FWdata, customVersion, MenuVersionOffset);
 
                     //Save FW
@@ -426,6 +449,90 @@ namespace FWcolorEditor
         {
             EditColor(button10, ref ButtonColor, button_background);
         }
-    }
 
+        private void button13_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog saveFileDialog = new SaveFileDialog
+            {
+                Filter = "Color editor files (*.pce)|*.pce|All files (*.*)|*.*",
+                FilterIndex = 1,
+                RestoreDirectory = true
+            };
+
+            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                //Get the path of specified file
+                string fileName = saveFileDialog.FileName;
+                StreamWriter streamWriter;
+                try
+                {
+                    streamWriter = new StreamWriter(fileName);
+                }
+                catch (Exception)
+                {
+                    string ErrorText = "Unable to generate theme file:" + fileName;
+                    MessageBox.Show(ErrorText, "File creation error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                streamWriter.WriteLine("FileBackgroung,FileText,LastFile,ProgBarEmpty,ProgBarFill,Button,Text,BoxBackground");
+                streamWriter.WriteLine("{0:X8},{1:X8},{2:X8},{3:X8},{4:X8},{5:X8},{6:X8},{7:X8}", FileBackgroundColor, FileNameColor, LastFileColor, PBarEmptyColor, PBarFillColor, ButtonColor, TextColor, BackgroundColor);
+                streamWriter.Close();
+            }
+        }
+
+        private void button12_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog
+            {
+                InitialDirectory = AppDomain.CurrentDomain.BaseDirectory,
+                Filter = "Color editor files (*.pce)|*.pce|All files (*.*)|*.*",
+                FilterIndex = 1,
+                RestoreDirectory = true
+            };
+
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                //Get the path of specified file
+                string fileName = openFileDialog.FileName;
+                StreamReader streamReader;
+                try
+                {
+                    streamReader = new StreamReader(fileName);
+                }
+                catch (Exception)
+                {
+                    string ErrorText = "Unable to open theme file: " + fileName;
+                    MessageBox.Show(ErrorText, "File read error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                string line;
+                Regex parts = new Regex(@"^([a-fA-F0-9]+)\,([a-fA-F0-9]+)\,([a-fA-F0-9]+)\,([a-fA-F0-9]+)\,([a-fA-F0-9]+)\,([a-fA-F0-9]+)\,([a-fA-F0-9]+)\,([a-fA-F0-9]+)$");
+                line = streamReader.ReadLine(); //Discard first line
+                line = streamReader.ReadLine(); //Read colors line
+                Match match = parts.Match(line);
+                if (match.Success)
+                {
+                    uint ARGBfileBkg = uint.Parse(match.Groups[1].Value, System.Globalization.NumberStyles.HexNumber);
+                    CheckAndSetColor("FileBackgroung", ARGBfileBkg, ref FileBackgroundColor, file_background);
+                    uint ARGBfileTxt = uint.Parse(match.Groups[2].Value, System.Globalization.NumberStyles.HexNumber);
+                    CheckAndSetColor("FileText", ARGBfileTxt, ref FileNameColor, file_text);
+                    uint ARGBfileLast = uint.Parse(match.Groups[3].Value, System.Globalization.NumberStyles.HexNumber);
+                    CheckAndSetColor("LastFile", ARGBfileLast, ref LastFileColor, file_last);
+                    uint ARGBpBarE = uint.Parse(match.Groups[4].Value, System.Globalization.NumberStyles.HexNumber);
+                    CheckAndSetColor("ProgBarEmpty", ARGBpBarE, ref PBarEmptyColor, pBar_empty);
+                    uint ARGBpBarF = uint.Parse(match.Groups[5].Value, System.Globalization.NumberStyles.HexNumber);
+                    CheckAndSetColor("ProgBarFill", ARGBpBarF, ref PBarFillColor, pBar_fill);
+                    uint ARGBbutton = uint.Parse(match.Groups[6].Value, System.Globalization.NumberStyles.HexNumber);
+                    CheckAndSetColor("Button", ARGBbutton, ref ButtonColor, button_background);
+                    uint ARGBtext = uint.Parse(match.Groups[7].Value, System.Globalization.NumberStyles.HexNumber);
+                    CheckAndSetColor("Text", ARGBtext, ref TextColor, text);
+                    uint ARGBbackg = uint.Parse(match.Groups[8].Value, System.Globalization.NumberStyles.HexNumber);
+                    CheckAndSetColor("BoxBackground", ARGBbackg, ref BackgroundColor, box_background);
+                    UpdateGUIcolors();
+                    //Enable save theme
+                    button13.Enabled = true;
+                }
+            }
+        }
+    }
 }
