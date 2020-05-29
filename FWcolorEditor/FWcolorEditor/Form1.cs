@@ -13,11 +13,16 @@ namespace FWcolorEditor
     public partial class Form1 : Form
     {
         private static readonly int MAX_FW_SIZE = 0x60000; //Max is 384KB (128KB are reserved for Bootloader)
+        private static readonly uint LCD_FileMagic = 0x3F2D3D44; //File ID for .LCD files (Photon, Elegoo, Epax...)
+        private static readonly uint TWP_FileMagic = 0xA4783E09; //File ID for .TWP files (Sonic Mini)
 
         //file data
         byte[] FWdata = new byte[MAX_FW_SIZE];
         int usedBlocks;
         string filePath = string.Empty;
+        string fileExtension = string.Empty;
+        uint fileMagic = LCD_FileMagic;
+
         Codec.CoDec FWCodec = new Codec.CoDec();
 
         //colors
@@ -302,7 +307,7 @@ namespace FWcolorEditor
             OpenFileDialog openFileDialog = new OpenFileDialog
             {
                 InitialDirectory = AppDomain.CurrentDomain.BaseDirectory,
-                Filter = "FW files (*.lcd)|*.lcd|All files (*.*)|*.*",
+                Filter = "FW files (*.lcd;*.twp)|*.lcd;*.twp|All files (*.*)|*.*",
                 FilterIndex = 1,
                 RestoreDirectory = true
             };
@@ -311,9 +316,14 @@ namespace FWcolorEditor
             {
                 //Get the path of specified file
                 filePath = openFileDialog.FileName;
+                //Get the specified file extension
+                fileExtension = Path.GetExtension(filePath);
+                //If file extension is TWP update file magic
+                if (string.Compare(fileExtension.ToLower(), 0, ".twp", 0, 1) == 0)
+                    fileMagic = TWP_FileMagic;
 
                 //Decode input file
-                usedBlocks = FWCodec.GetFW(filePath, FWdata);
+                usedBlocks = FWCodec.GetFW(filePath, FWdata, fileMagic);
                 if (usedBlocks > 0)
                 {
                     //Read current colors
@@ -371,7 +381,7 @@ namespace FWcolorEditor
             SaveFileDialog saveFileDialog = new SaveFileDialog
             {
                 //                InitialDirectory = AppDomain.CurrentDomain.BaseDirectory,
-                Filter = "FW files (*.lcd)|*.lcd|All files (*.*)|*.*",
+                Filter = "FW files (*" + fileExtension + ")| *" + fileExtension + "|All files (*.*)|*.*",
                 FilterIndex = 1,
                 RestoreDirectory = true
             };
@@ -393,7 +403,7 @@ namespace FWcolorEditor
                     SetVersion(FWdata, customVersion, MenuVersionOffset);
 
                     //Save FW
-                    if (FWCodec.PutFW(filePath, FWdata, usedBlocks) == 0)
+                    if (FWCodec.PutFW(filePath, FWdata, usedBlocks, fileMagic) == 0)
                     {
                         MessageBox.Show("FW file generated!", "Encode Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
