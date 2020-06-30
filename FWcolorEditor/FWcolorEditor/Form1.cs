@@ -319,8 +319,10 @@ namespace FWcolorEditor
                 //Get the specified file extension
                 fileExtension = Path.GetExtension(filePath);
                 //If file extension is TWP update file magic
-                if (string.Compare(fileExtension.ToLower(), 0, ".twp", 0, 1) == 0)
+                if (string.Compare(fileExtension, 0, ".twp", 0, 4, true) == 0)
                     fileMagic = TWP_FileMagic;
+                else
+                    fileMagic = LCD_FileMagic;
 
                 //Decode input file
                 usedBlocks = FWCodec.GetFW(filePath, FWdata, fileMagic);
